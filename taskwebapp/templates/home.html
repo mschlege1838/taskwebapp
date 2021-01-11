@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+{% from 'common.html' import task_url, format_ts -%}
+
+{%- macro task_header() -%}
+<tr>
+    <th>Task</th>
+    <th>Status</th>
+    <th>Due</th>
+    <th>Last Action</th>
+</tr>
+{%- endmacro -%}
+
+{%- macro task_row(task) -%}
+<tr data-task-id="{{task.task_id}}">
+    <td><a href="{{task_url(task.task_id)}}">{{task.name|e}}</a></td>
+    <td>{{task.status|e}}</td>
+    <td data-type="timestamp">{{format_ts(task.due_ts)}}</td>
+    <td data-type="timestamp">{{format_ts(task.last_action_ts)}}</td>
+</tr>
+{%- endmacro -%}
+
+{%- macro task_section(title, tasks, sub_category=False) -%}
+<section class="{{'sub-category' if sub_category else 'task-category'}}">
+    <h2>{{ title|e }}</h2>
+    <table>
+        <thead>
+            {{- task_header() -}}
+        </thead>
+        <tbody>
+            {%- for task in tasks -%}
+                {{ task_row(task) }}
+            {%- endfor -%}
+        </tbody>
+    </table>
+</section>
+{%- endmacro -%}
+
+
+<html>
+<head>
+<title>Task List</title>
+<style>
+.task-block .task-category {
+    display: inline-block;
+    width: 50%;
+    vertical-align: top;
+}
+
+
+
+footer {
+    position: fixed;
+    left: 100%;
+    top: 100%;
+    margin-left: -11em;
+    margin-top: -2em;
+}
+footer .quote {
+    text-align: right;
+}
+footer .quote p {
+    margin: 0;
+    font-size: .8em;
+    font-style: italic;
+}
+
+</style>
+</head>
+<body>
+    <section class="content">
+        <h1>Task List</h1>
+        <div class="task-block">
+            <section class="task-category">
+                {%- if data.late -%}
+                    {{- task_section('Late', data.late, True) -}}
+                {%- endif -%}
+                {{- task_section('Due Today', data.due_today, True) -}}
+            </section>
+            {{- task_section('Due This Week', data.due_this_week) -}}
+        </div>
+        <div class="task-block">
+            {{- task_section('Pending', data.pending) -}}
+            {{- task_section('Due Later', data.due_later) -}}
+        </div>
+    </section>
+    <footer>
+        <div class="quote">
+            <p>OODA:</p>
+            <p>Observe, Orient, Decide, Act</p>
+        </div>
+    </footer>
+</body>
+</html>

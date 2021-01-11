@@ -1,0 +1,60 @@
+{% macro format_ts(ts) -%}
+{{ts.strftime('%Y-%m-%d %H:%M') if ts else ''}}
+{%- endmacro -%}
+
+
+
+{%- macro field(name, label, type, value, options, field) -%}
+{%- set name = name if name else field.name -%}
+{%- set label = label if label else field.label -%}
+{%- set type = type if type else field.type -%}
+{%- set value = value if value else field.value -%}
+{%- set options = options if options else field.options -%}
+<div class="field">
+    {%- if label -%}
+    <span class="field-label"><label for="{{name}}">{{label|e}}</label></span>
+    {%- endif -%}
+    <span class="field-input">
+        {%- if type == 'select' -%}
+            <select name="{{name}}" id="{{name}}">
+                {%- for option in options -%}
+                    {%- if option is string -%}
+                        <option {{ bool_attribute('selected', option == value) }}>{{option|sn|e}}</option>
+                    {%- else -%}
+                        {%- set opt_value, opt_label = option -%}
+                        <option value="{{opt_value|sn|e}}" {{ bool_attribute('selected', opt_value == value) }}>{{opt_label|sn|e}}</option>
+                    {%- endif -%}
+                {%- endfor -%}
+            </select>
+        {%- elif type == 'textarea' -%}
+            <textarea name="{{name}}" id="{{name}}">{{value|sn|e}}</textarea>
+        {%- elif type == 'datetime' -%}
+            <input name="{{name}}" id="{{name}}" type="date" {{ attribute('value', value.date_val) }} />
+            <input name="{{name}}_time" id="{{name}}_time" placeholder="HH:MM" {{ attribute('value', value.time_val) }} />
+        {%- else -%}
+            <input name="{{name}}" id="{{name}}" {{ attribute('type', type) }} {{ attribute('value', value) }} />
+        {%- endif -%}
+    </span>
+    {%- if field.error -%}
+    <span class="field-error error">{{field.error|e}}</span>
+    {%- endif -%}
+</div>
+{%- endmacro -%}
+
+
+{%- macro attribute(name, value) -%}
+{%- if value -%}
+{{name}}="{{value|e}}"
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bool_attribute(name, value) -%}
+{%- if value -%}
+{{name}}
+{%- endif -%}
+{%- endmacro -%}
+
+
+{%- macro task_url(task_id) -%}
+/tasks/{{task_id}}
+{%- endmacro -%}

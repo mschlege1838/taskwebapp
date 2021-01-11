@@ -1,0 +1,2 @@
+include LICENSE
+recursive-include taskwebapp content/** node_modules/** templates/**

@@ -1,0 +1,144 @@
+
+@keyframes highlight {
+    50% {
+        background-color: darkgrey;
+    }
+}
+
+.error {
+    font-size: .8em;
+    font-style: italic;
+    color: red;
+}
+
+.tag.highlighted {
+    animation-name: highlight;
+    animation-duration: .4s;
+}
+
+
+.field-set {
+    display: table;
+}
+
+.field-set .field {
+    display: table-row;
+}
+
+.field-set .field .field-label, .field-set .field .field-input, .field-set .field .field-error {
+    display: table-cell;
+    vertical-align: top;
+}
+
+.field-set .field .field-label {
+    padding-right: 1em;
+    padding-bottom: .5em;
+}
+
+
+
+.remove-button, .pin-button, .unpin-button {
+    cursor: pointer;
+}
+
+.remove-button, .pin-button, .unpin-button, .drop-zone, .note-header label {
+    user-select: none;
+}
+
+
+
+.note-container {
+    border: 1px solid lightgray;
+    padding: .3em;
+    background-color: white;
+}
+
+.note-container.pinned-over {
+    border: 3px solid gray;
+}
+
+
+.note, .drop-zone {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.note {
+    height: 8em;
+}
+
+.drop-zone {
+    border: 1px solid black;
+    height: 3em;
+    margin-bottom: .5em;
+    text-align: center;
+    line-height: 3em;
+}
+
+
+.note-container .note-header label, .note-container .note-header .controls {
+    width: 50%;
+    display: inline-block;
+}
+
+.note-container .note-header .controls {
+    text-align: right;
+}
+
+.notes-list, .attachment-list {
+    padding: 0;
+}
+
+
+.tag, .attachment {    
+    padding: .1em;
+    margin-right: .2em;
+    display: inline-block;
+}
+
+.tag, .attachment.new {
+    border: 1px solid black;
+}
+
+.attachment.current {
+    border: 1px solid green;
+}
+
+
+.tag .text, .attachment .text {
+    padding-right: .7em;
+}
+
+
+.pinned-list {
+    padding: 0 0 1em 0;
+    margin: 0 0 1em 0;
+    border-bottom: 1px solid lightgray;
+    position: relative;
+}
+
+.pinned-list li {
+    display: inline-block;
+    margin-right: .5em;
+}
+
+
+.notes-list li {
+    display: block;
+}
+
+.attachment-list li {
+    display: inline-block;
+}
+
+
+
+.attachment-list {
+    margin-bottom: .7em;
+}
+
+.attachments-input {
+    display: none;
+}
+
+

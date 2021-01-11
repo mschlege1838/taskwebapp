@@ -1,0 +1,16 @@
+{
+  "name": "taskwebapp",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "author": "Marty Schlegel",
+  "license": "MIT AND BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mschlege1838/taskwebapp"
+  },
+  "dependencies": {
+    "@mschlege1838/autocomplete-input": "1.0.0"
+  },
+  
+}

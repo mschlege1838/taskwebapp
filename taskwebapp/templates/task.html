@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+{% from 'common.html' import field -%}
+
+{%- macro do_note(note, pinned) -%}
+    {%- set note_id -%}note_{{note.note_id}}{%- endset -%}
+    {%- set container_id -%}{{note_id}}_container{%- endset -%}
+    {%- set attachment_drop_zone_id -%}{{container_id}}_attachmentDropZone{%- endset -%}
+    <li class="note-container{{' pinned' if pinned else ''}}" id="{{container_id}}">
+        <div class="note-header">
+            <label for="{{attachment_drop_zone_id}}">Attachments</label><!--
+            --><span class="controls">
+                <span class="{{'unpin-button' if pinned else 'pin-button'}}" data-container-id="{{container_id}}"></span>
+                <span class="remove-button" data-container-id="{{container_id}}">&#x2715;</span>
+            </span>
+        </div>
+        <ul class="attachment-list">
+        {%- for attachment in note.attachment_references -%}
+            <li class="attachment current" data-file-name="{{attachment.name|e}}">
+                <a href="/attachments/{{attachment.attachment_id}}" target="_blank">{{attachment.name|e}}</a>
+                <span class="remove-button" data-file-name="{{attachment.name|e}}">&#x2715;</span>
+                <input type="hidden" name="{{note_id}}_attachments" value="{{attachment.attachment_id}}" />
+            </li>
+        {%- endfor -%}
+        </ul>
+        <div id="{{attachment_drop_zone_id}}" class="drop-zone">Drop Attachments Here</div>
+        <textarea id="{{note_id}}" name="{{note_id}}" class="note">{{note.text|e}}</textarea>
+    </li>
+{%- endmacro -%}
+
+
+{%- macro do_tags(field, section_id, input_id) -%}
+<div class="field" id="{{section_id}}">
+    <span class="field-label"><label for="{{input_id}}">{{field.label|e}}</label></span>
+    <span class="field-input">
+        <input id="{{input_id}}" />
+    </span>
+</div>
+{%- endmacro -%}
+
+<html>
+<head>
+<title>Task Maintenance</title>
+
+<link rel="stylesheet" href="/content/@mschlege1838/autocomplete-input/include/autocomplete-input.min.css" />
+<link rel="stylesheet" href="/content/css/style.css" />
+
+<script src="/content/@mschlege1838/autocomplete-input/include/autocomplete-input.min.js"></script>
+<script src="/content/js/TagFieldHandler.js"></script>
+<script src="/content/js/JSONListMatcher.js"></script>
+<script src="/content/js/highlightUtil.js"></script>
+<script src="/content/js/NotesHandler.js"></script>
+<script src="/content/js/AttachmentDropHandler.js"></script>
+
+<style>
+#name {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#taskInfo .field-set .field-input, .note-container {
+    width: 40em;
+}
+
+.pin-button, .unpin-button {
+    font-size: .5em;
+    border: 1px solid black;
+}
+
+.pin-button::after {
+    content: 'Pin';
+}
+
+.unpin-button::after {
+    content: 'Unpin';
+}
+
+
+
+footer {
+    position: fixed;
+    left: 100%;
+    top: 100%;
+    margin-left: -11em;
+    margin-top: -2em;
+}
+footer .quote {
+    text-align: right;
+}
+footer .quote p {
+    margin: 0;
+    font-size: .8em;
+    font-style: italic;
+}
+</style>
+
+<script id="tagsFieldName" type="application/json">{{fields.tags.name|json}}</script>
+<script id="currentTags" type="application/json">{{fields.tags.value|json}}</script>
+
+<script>
+function pageInit() {
+    'use strict';
+    
+    // Tags
+    const tagInput = document.getElementById('tagInput');
+    new AutocompleteInput(tagInput, new JSONListMatcher(`/tags?q={q}`, 'q')).init();
+    new TagFieldHandler(document.getElementById('taskTags'), tagInput, JSON.parse(document.getElementById('tagsFieldName').textContent))
+            .init(JSON.parse(document.getElementById('currentTags').textContent));
+    
+    
+    // Notes
+    new NotesHandler(document.getElementById('addNoteButton'), document.querySelector('#taskNotes .notes-list'), 
+            document.getElementById('pageForm'), document.querySelector('#taskNotes .pinned-list')).init();    
+}
+
+document.addEventListener('DOMContentLoaded', pageInit);
+</script>
+</head>
+<body>
+    <section class="content">
+        <h1>{{title|e}}</h1>
+        <form id="pageForm" method="post" enctype="multipart/form-data">
+            <section id="taskInfo">
+                <h2>Task Information</h2>
+                <div class="field-set">
+                    {{- field(field=fields.name) -}}
+                    {{- field(field=fields.due) -}}
+                    {{- field(field=fields.status) -}}
+                    {{- do_tags(fields.tags, section_id='taskTags', input_id='tagInput') -}}
+                    </div>
+                </div>
+                <div>
+                    <input type="submit" />
+                </div>
+            </section>
+            <section id="taskNotes">
+                <h2>Notes/Attachments</h2>
+                <ul class="pinned-list">
+                {%- for note in task.pinned_notes -%}
+                    {{- do_note(note, True) -}}
+                {%- endfor -%}
+                </ul>
+                <div class="controls">
+                    <input type="button" id="addNoteButton" value="Add Note" />
+                </div>
+                <ul class="notes-list">
+                {%- for note in task.notes -%}
+                    {{- do_note(note, False) -}}
+                {%- endfor -%}
+                </ul>
+                <div>
+                    <input type="submit" />
+                </div>
+            </section>
+        </form>
+    </section>
+    <footer>
+        <div class="quote">
+            <p>Be well, and do good work.</p>
+        </div>
+    </footer>
+</body>
+</html>
