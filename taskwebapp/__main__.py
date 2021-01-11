@@ -52,7 +52,7 @@ static_content_dirs = {
         re.compile('.+')
     ],
     'node_modules': [
-        re.compile('/@mschlege1838/autocomplete-input/include/.+')
+        re.compile('@mschlege1838/autocomplete-input/include/.+')
     ]
 }
 
