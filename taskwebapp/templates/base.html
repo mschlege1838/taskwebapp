@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>{%- block title -%}{%- endblock -%}</title>
+<link rel="stylesheet" href="/content/css/style.css" />
+{%- block head -%}{%- endblock -%}
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/tasks?_create_">Create New</a>
+        </nav>
+    </header>
+    <main>
+        <h1>{{ self.title() }}</h1>
+        {%- block main -%}{%- endblock -%}
+    </main>
+    <footer>
+        <div class="quote">
+            <div class="quote">
+                {%- block quote -%}{%- endblock -%}
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

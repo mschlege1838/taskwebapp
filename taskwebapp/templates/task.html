@@ -1,5 +1,7 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
 {% from 'common.html' import field -%}
+
+{# Declarations #}
 
 {%- macro do_note(note, pinned) -%}
     {%- set note_id -%}note_{{note.note_id}}{%- endset -%}
@@ -37,12 +39,17 @@
 </div>
 {%- endmacro -%}
 
-<html>
-<head>
-<title>Task Maintenance</title>
 
+
+
+
+{# Content #}
+
+{%- block title %}Task Maintenance{% endblock -%}
+
+
+{%- block head -%}
 <link rel="stylesheet" href="/content/@mschlege1838/autocomplete-input/include/autocomplete-input.min.css" />
-<link rel="stylesheet" href="/content/css/style.css" />
 
 <script src="/content/@mschlege1838/autocomplete-input/include/autocomplete-input.min.js"></script>
 <script src="/content/js/TagFieldHandler.js"></script>
@@ -73,25 +80,8 @@
 .unpin-button::after {
     content: 'Unpin';
 }
-
-
-
-footer {
-    position: fixed;
-    left: 100%;
-    top: 100%;
-    margin-left: -11em;
-    margin-top: -2em;
-}
-footer .quote {
-    text-align: right;
-}
-footer .quote p {
-    margin: 0;
-    font-size: .8em;
-    font-style: italic;
-}
 </style>
+
 
 <script id="tagsFieldName" type="application/json">{{fields.tags.name|json}}</script>
 <script id="currentTags" type="application/json">{{fields.tags.value|json}}</script>
@@ -114,53 +104,47 @@ function pageInit() {
 
 document.addEventListener('DOMContentLoaded', pageInit);
 </script>
-</head>
-<body>
-    <section class="content">
-        <nav>
-            <a href="/">Home</a>
-            <a href="/tasks?_create_">Create New</a>
-        </nav>
-        <h1>{{title|e}}</h1>
-        <form id="pageForm" method="post" enctype="multipart/form-data">
-            <section id="taskInfo">
-                <h2>Task Information</h2>
-                <div class="field-set">
-                    {{- field(field=fields.name) -}}
-                    {{- field(field=fields.due) -}}
-                    {{- field(field=fields.status) -}}
-                    {{- do_tags(fields.tags, section_id='taskTags', input_id='tagInput') -}}
-                    </div>
-                </div>
-                <div>
-                    <input type="submit" />
-                </div>
-            </section>
-            <section id="taskNotes">
-                <h2>Notes/Attachments</h2>
-                <ul class="pinned-list">
-                {%- for note in task.pinned_notes -%}
-                    {{- do_note(note, True) -}}
-                {%- endfor -%}
-                </ul>
-                <div class="controls">
-                    <input type="button" id="addNoteButton" value="Add Note" />
-                </div>
-                <ul class="notes-list">
-                {%- for note in task.notes -%}
-                    {{- do_note(note, False) -}}
-                {%- endfor -%}
-                </ul>
-                <div>
-                    <input type="submit" />
-                </div>
-            </section>
-        </form>
-    </section>
-    <footer>
-        <div class="quote">
-            <p>Be well, and do good work.</p>
+
+{%- endblock -%}
+
+{%- block main -%}
+<form id="pageForm" method="post" enctype="multipart/form-data">
+    <section id="taskInfo">
+        <h2>Task Information</h2>
+        <div class="field-set">
+            {{- field(field=fields.name) -}}
+            {{- field(field=fields.due) -}}
+            {{- field(field=fields.status) -}}
+            {{- do_tags(fields.tags, section_id='taskTags', input_id='tagInput') -}}
+            </div>
         </div>
-    </footer>
-</body>
-</html>
+        <div>
+            <input type="submit" />
+        </div>
+    </section>
+    <section id="taskNotes">
+        <h2>Notes/Attachments</h2>
+        <ul class="pinned-list">
+        {%- for note in task.pinned_notes -%}
+            {{- do_note(note, True) -}}
+        {%- endfor -%}
+        </ul>
+        <div class="controls">
+            <input type="button" id="addNoteButton" value="Add Note" />
+        </div>
+        <ul class="notes-list">
+        {%- for note in task.notes -%}
+            {{- do_note(note, False) -}}
+        {%- endfor -%}
+        </ul>
+        <div>
+            <input type="submit" />
+        </div>
+    </section>
+</form>
+{%- endblock -%}
+
+
+{%- block quote -%}
+<p>Be well, and do good work.</p>
+{%- endblock -%}

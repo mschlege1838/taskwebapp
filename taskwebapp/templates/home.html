@@ -1,5 +1,9 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
 {% from 'common.html' import task_url, format_ts -%}
+
+
+
+{# Declarations #}
 
 {%- macro task_header() -%}
 <tr>
@@ -36,62 +40,43 @@
 {%- endmacro -%}
 
 
-<html>
-<head>
-<title>Task List</title>
+
+{# Content #}
+
+{%- block title %}Task List{% endblock -%}
+
+
+{%- block head -%}
 <style>
 .task-block .task-category {
     display: inline-block;
     width: 50%;
     vertical-align: top;
 }
-
-
-
-footer {
-    position: fixed;
-    left: 100%;
-    top: 100%;
-    margin-left: -11em;
-    margin-top: -2em;
-}
-footer .quote {
-    text-align: right;
-}
-footer .quote p {
-    margin: 0;
-    font-size: .8em;
-    font-style: italic;
-}
-
 </style>
-</head>
-<body>
-    <section class="content">
-        <nav>
-            <a href="/">Home</a>
-            <a href="/tasks?_create_">Create New</a>
-        </nav>
-        <h1>Task List</h1>
-        <div class="task-block">
-            <section class="task-category">
-                {%- if data.late -%}
-                    {{- task_section('Late', data.late, True) -}}
-                {%- endif -%}
-                {{- task_section('Due Today', data.due_today, True) -}}
-            </section>
-            {{- task_section('Due This Week', data.due_this_week) -}}
-        </div>
-        <div class="task-block">
-            {{- task_section('Pending', data.pending) -}}
-            {{- task_section('Due Later', data.due_later) -}}
-        </div>
+{%- endblock -%}
+
+
+
+{%- block main -%}
+<div class="task-block">
+    <section class="task-category">
+        {%- if data.late -%}
+            {{- task_section('Late', data.late, True) -}}
+        {%- endif -%}
+        {{- task_section('Due Today', data.due_today, True) -}}
     </section>
-    <footer>
-        <div class="quote">
-            <p>OODA:</p>
-            <p>Observe, Orient, Decide, Act</p>
-        </div>
-    </footer>
-</body>
-</html>
+    {{- task_section('Due This Week', data.due_this_week) -}}
+</div>
+<div class="task-block">
+    {{- task_section('Pending', data.pending) -}}
+    {{- task_section('Due Later', data.due_later) -}}
+</div>
+{%- endblock -%}
+
+
+
+{%- block quote -%}
+<p>OODA:</p>
+<p>Observe, Orient, Decide, Act</p>
+{%- endblock -%}

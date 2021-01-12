@@ -142,3 +142,20 @@
 }
 
 
+
+
+footer {
+    position: fixed;
+    left: 100%;
+    top: 100%;
+    margin-left: -11em;
+    margin-top: -2em;
+}
+footer .quote {
+    text-align: right;
+}
+footer .quote p {
+    margin: 0;
+    font-size: .8em;
+    font-style: italic;
+}
