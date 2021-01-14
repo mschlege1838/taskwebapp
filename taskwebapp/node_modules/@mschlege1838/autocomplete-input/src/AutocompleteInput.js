@@ -119,6 +119,7 @@ AutocompleteInput.prototype.preventDefaultOnTab = true;
 AutocompleteInput.prototype.ignoreCase = true;
 AutocompleteInput.prototype.stopPropagationOnControl = true;
 AutocompleteInput.prototype.mouseOver = false;
+AutocompleteInput.prototype.prevValue = null;
 
 
 AutocompleteInput.prototype.init = function () {
@@ -274,6 +275,10 @@ AutocompleteInput.prototype.fetchMatch = function () {
     var matcher, currentValue, onMatchesCallback;
     
     currentValue = this.input.value;
+    if (currentValue === this.prevValue) {
+        return;
+    }
+    
     matcher = this.matcher;
     onMatchesCallback = this.onMatchesCallback;
     
@@ -282,6 +287,8 @@ AutocompleteInput.prototype.fetchMatch = function () {
     } else {
         matcher(currentValue, onMatchesCallback);
     }
+    
+    this.prevValue = currentValue;
 };
 
 

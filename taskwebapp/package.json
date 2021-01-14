@@ -10,7 +10,6 @@
     "url": "https://github.com/mschlege1838/taskwebapp"
   },
   "dependencies": {
-    "@mschlege1838/autocomplete-input": "1.0.0"
-  },
-  
+    "@mschlege1838/autocomplete-input": "1.0.1"
+  }
 }
