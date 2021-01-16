@@ -105,7 +105,7 @@ class TaskHandler:
             except RequestException as e:
                 handler.send_error(e.code)
         elif request_type == TaskRequestType.SEARCH:
-            handler.send_error(501)
+            controller.do_search(context)
         else:
             handler.send_error(400)
     

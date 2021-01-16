@@ -9,6 +9,15 @@ from enum import Enum
 
 # User
 from taskwebapp.domain import TaskReference, TaskStatus, Task, AttachmentReference, TaskNote, Attachment, TaskDashboardData
+from taskwebapp.domain.task.search import TaskSearchLogicalOp, TaskSearchStrOp, TaskSearchNumOp, TaskSearchField, \
+    TaskSearchSimpleExpr, TaskSearchIsAnyExpr, TaskSearchExpr, TaskSearchGroupExpr
+
+
+
+like_escape_pattern = re.compile('([_%+])')
+def like_escape(val, case_sensitive=False):
+    result = like_escape_pattern.sub('+\1', val)
+    return result if case_sensitive else result.casefold()
 
 
 
@@ -278,8 +287,41 @@ class TaskService:
             connection.close()
         
         
-        return TaskDashboardData(late, due_today, due_this_week, pending, due_later)
+        return TaskDashboardData(late, due_today, due_this_week, pending, due_later)  
     
+    def search(self, criteria):
+        if not criteria:
+            return []
+    
+        builder = CriteriaBuilder()
+        builder.add_criteria(criteria)
+        
+        sql = '''
+        SELECT
+            TASK_ID
+            , TASK_NM
+            , STATUS_ID
+            , DUE_TS
+            , MOD_TS
+          FROM TASK
+          WHERE $CLAUSE$
+        '''.replace('$CLAUSE$', ' '.join(builder.sql))
+        
+        connection = get_connection(self.db_fname)
+        try:
+            c = connection.cursor()
+            
+            c.execute(sql, builder.params)
+            result = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise e
+        finally:
+            connection.close()
+        
+        return result
     
     def get_task(self, id):
         connection = get_connection(self.db_fname)
@@ -908,10 +950,9 @@ class AttachmentService:
         return result
 
 
+
 class TagService:
     
-    escape_pattern = re.compile('([_%+])')
-
     def __init__(self, db_fname):
         self.db_fname = db_fname
     
@@ -923,14 +964,12 @@ class TagService:
         try:
             c = connection.cursor()
             
-            q_esc = TagService.escape_pattern.sub('+\1', q).casefold()
-            
             c.execute('''
             SELECT
                 TAG_TEXT
               FROM TAG
               WHERE CASEFOLD(TAG_TEXT) LIKE ? ESCAPE '+'
-            ''', (f'%{q_esc}%',))
+            ''', (f'%{like_escape(q)}%',))
             
             result = [r['TAG_TEXT'] for r in c]
             
@@ -942,3 +981,105 @@ class TagService:
             connection.close()
         
         return result
+
+
+
+
+# Util
+class InvalidCriteriaException(Exception):
+    def __init__(self, field, operator):
+        super().__init__(f'Operator {operator} is not compatible with field: {field}')
+        self.field = field
+        self.operator = operator
+
+class CriteriaBuilder:
+    def __init__(self):
+        self.sql = []
+        self.params = []
+    
+    def add_criteria(self, criteria):
+        if isinstance(criteria, TaskSearchSimpleExpr):
+            field = criteria.field
+            op = criteria.op
+            
+            if field == TaskSearchField.NAME and isinstance(op, TaskSearchStrOp):
+                self.__str_op('TASK_NM', op, criteria.value)
+            elif field == TaskSearchField.DUE and isinstance(op, TaskSearchNumOp):
+                self.__num_op('DUE_TS', op, criteria.value)
+            else:
+                raise InvalidCriteriaException(field, op)
+        elif isinstance(criteria, TaskSearchIsAnyExpr):
+            field = criteria.field
+            params = self.params
+            
+            if field == TaskSearchField.STATUS:
+                self.sql.append(f'STATUS_ID IN ({", ".join("?" for c in criteria.values)})')
+                for val in criteria.values:
+                    params.append(val.value)
+                
+            elif field == TaskSearchField.TAGS:
+                self.sql.append(f'''
+                TASK_ID IN (
+                    SELECT TASK_ID
+                      FROM TASK_TAG
+                      WHERE TAG_ID IN (
+                          SELECT TAG_ID
+                            FROM TAG
+                            WHERE TAG_TEXT IN ($CLAUSE$)
+                      )
+                )
+                '''.replace('$CLAUSE$', ", ".join("?" for c in criteria.values)))
+                for val in criteria.values:
+                    params.append(val)
+            else:
+                raise InvalidCriteriaException(field, 'IS ANY')
+        elif isinstance(criteria, TaskSearchExpr):
+            op = criteria.op
+            if op == TaskSearchLogicalOp.AND:
+                sql_op = 'AND'
+            elif op == TaskSearchLogicalOp.OR:
+                sql_op = 'OR'
+            else:
+                raise ValueError(op)
+                
+            self.add_criteria(criteria.left_expr)
+            self.sql.append(sql_op)
+            self.add_criteria(criteria.right_expr)
+        elif isinstance(criteria, TaskSearchGroupExpr):
+            sql = self.sql
+            sql.append('(')
+            self.add_criteria(criteria.expr)
+            sql.append(')')
+    
+    def __str_op(self, name, op, value):
+        sql = self.sql
+        params = self.params
+        
+        if op in (TaskSearchStrOp.STARTS_WITH, TaskSearchStrOp.CONTAINS):
+            sql.append(f"CASEFOLD({name}) LIKE ? ESCAPE '+'")
+            params.append(f'{"%" if op == TaskSearchStrOp.CONTAINS else ""}{like_escape(value)}%')
+        elif op == TaskSearchStrOp.EQUALS:
+            sql.append(f'CASEFOLD({name}) = ?')
+            params.append(value.casefold())
+        else:
+            raise ValueError(op)
+    
+    def __num_op(self, name, op, value):
+        if op == TaskSearchNumOp.EQ:
+            sql_op = '='
+        elif op == TaskSearchNumOp.GTE:
+            sql_op = '>='
+        elif op == TaskSearchNumOp.LTE:
+            sql_op = '<='
+        elif op == TaskSearchNumOp.GT:
+            sql_op = '>'
+        elif op == TaskSearchNumOp.LT:
+            sql_op = '<'
+        elif op == TaskSearchNumOp.NE:
+            sql_op = '<>'
+        else:
+            raise ValueError(op)
+        
+        self.sql.append(f'{name} {sql_op} ?')
+        self.params.append(value)
+    

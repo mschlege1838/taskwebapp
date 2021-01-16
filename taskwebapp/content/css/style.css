@@ -25,7 +25,7 @@
     display: table-row;
 }
 
-.field-set .field .field-label, .field-set .field .field-input, .field-set .field .field-error {
+.field-set .field .field-label, .field-set .field .field-input, .field-set .field .field-error, .field-set .field .field-operator {
     display: table-cell;
     vertical-align: top;
 }
@@ -34,6 +34,12 @@
     padding-right: 1em;
     padding-bottom: .5em;
 }
+
+.field-set .field-input {
+    width: 40em;
+}
+
+
 
 
 
@@ -159,3 +165,5 @@ footer .quote p {
     font-size: .8em;
     font-style: italic;
 }
+
+

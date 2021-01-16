@@ -26,6 +26,9 @@ from taskwebapp.controller.task import TaskController
 # Definitions
 def jinja_finalize(expr):
     return expr if expr is not None else ''
+    
+def jinja_seq(val):
+    return isinstance(val, list) or isinstance(val, set) or isinstance(val, tuple)
 
 
 # args
@@ -65,6 +68,7 @@ static_content_dirs = {
 jinja_env = Environment(loader=PackageLoader(base_package_name, encoding=encoding), finalize=jinja_finalize, undefined=ChainableUndefined)
 jinja_env.filters['sn'] = jinja_finalize
 jinja_env.filters['json'] = json.dumps
+jinja_env.tests['seq'] = jinja_seq
 renderer = JinjaRenderer(jinja_env, encoding)
 
 # Resolve static content directories.

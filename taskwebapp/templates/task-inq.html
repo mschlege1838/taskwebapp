@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% from 'common.html' import do_input, tags_field, task_header, task_row -%}
+
+
+
+{# Content #}
+
+{%- block title %}Task Inquiry{% endblock -%}
+
+
+{%- block head -%}
+<link rel="stylesheet" href="/content/@mschlege1838/autocomplete-input/include/autocomplete-input.min.css" />
+
+<script src="/content/@mschlege1838/autocomplete-input/include/autocomplete-input.min.js"></script>
+<script src="/content/js/TagFieldHandler.js"></script>
+<script src="/content/js/JSONListMatcher.js"></script>
+<script src="/content/js/TagFieldHandler.js"></script>
+<script src="/content/js/highlightUtil.js"></script>
+
+<style>
+#name {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#criteria .field-operator {
+    padding-right: .5em;
+}
+
+#criteria .field-operator input[readonly] {
+    width: 5em;
+}
+
+#criteria select[multiple] {
+    margin-bottom: .3em;
+}
+
+#criteria .field-set {
+    margin-bottom: .5em;
+}
+
+#criteria {
+    margin-bottom: 2em;
+}
+</style>
+
+
+<script id="tagsFieldName" type="application/json">{{fields.tags.name|json}}</script>
+<script id="currentTags" type="application/json">{{fields.tags.value|json}}</script>
+
+<script>
+var ac;
+function pageInit() {
+    'use strict';
+    
+    const tagInput = document.getElementById('tagInput');
+    ac = new AutocompleteInput(tagInput, new JSONListMatcher(`/tags?q={q}`, 'q')); ac.init();
+    new TagFieldHandler(document.getElementById('taskTags'), tagInput, JSON.parse(document.getElementById('tagsFieldName').textContent))
+            .init(JSON.parse(document.getElementById('currentTags').textContent));
+}
+
+document.addEventListener('DOMContentLoaded', pageInit);
+</script>
+{%- endblock -%}
+
+
+{%- block main -%}
+<form id="criteria">
+    <div class="field-set">
+        <div class="field">
+            <span class="field-label"><label for="taskName">{{ fields.name.label|e }}</label></span>
+            <span class="field-operator">{{ do_input(fields.name_operator) }}</span>
+            <span class="field-input">{{ do_input(fields.name) }}</span>
+        </div>
+        <div class="field">
+            <span class="field-label"><label for="due">{{ fields.due.label|e }}</label></span>
+            <span class="field-operator">{{ do_input(fields.due_operator) }}</span>
+            <span class="field-input">{{ do_input(fields.due) }}</span>
+            {%- if fields.due.error %}<span class="field-error">{{ fields.due.error|e }}</span>{% endif -%}
+        </div>
+        <div class="field">
+            <span class="field-label"><label for="status">{{ fields.status.label|e }}</label></span>
+            <span class="field-operator">{{ do_input(fields.status_operator) }}</span>
+            <span class="field-input">{{ do_input(fields.status) }}</span>
+        </div>
+        {{- tags_field(fields.tags, 'taskTags', 'tagInput', True) -}}
+    </div>
+    <input type="submit" />
+</form>
+
+{%- if results -%}
+<table id="results">
+    <thead>
+        {{- task_header() -}}
+    </thead>
+    <tbody>
+        {%- for task in results -%}
+            {{ task_row(task) }}
+        {%- endfor -%}
+    </tbody>
+</table>
+{%- endif -%}
+
+{%- if none_found -%}<div id="results">No results found.</div>{%- endif -%}
+{%- endblock -%}

@@ -27,13 +27,15 @@ class ValidationException(Exception):
 
 
 class Field:
-    def __init__(self, name, label, type=None, value=None, options=None, error=None):
+    def __init__(self, name, label=None, type=None, value=None, options=None, error=None, multiple=False, readonly=False):
         self.name = name
         self.label = label
         self.type = type
         self.value = value
         self.options = options
         self.error = error
+        self.multiple = multiple
+        self.readonly = readonly
 
 
 class DateTimeField:

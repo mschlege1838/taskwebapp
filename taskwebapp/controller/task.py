@@ -4,6 +4,7 @@
 import re
 import os.path
 
+from abc import ABC
 from datetime import datetime
 
 # User
@@ -11,6 +12,8 @@ import taskwebapp.requestutils as requestutils
 
 from taskwebapp.controller import Field, DateTimeField, ValidationException, BadRequestException, NotFoundException
 from taskwebapp.domain import Task, TaskStatus, TaskNote, MultipartWrapper
+from taskwebapp.domain.task.search import TaskSearchLogicalOp, TaskSearchStrOp, TaskSearchNumOp, TaskSearchSimpleExpr, \
+        TaskSearchIsAnyExpr, TaskSearchExpr, TaskSearchField
 
 
 
@@ -28,7 +31,30 @@ class TaskController:
         self.task_service = task_service
         self.note_service = note_service
         self.attachment_service = attachment_service
+    
+    def do_search(self, context):
         
+        criteria = TaskSearchCriteria()
+        fields = {}
+        for processor in field_processors:
+            processor.define_field(context, fields)
+            processor.process_search(context, fields, criteria)
+        
+        if criteria.expr:
+            results = self.task_service.search(criteria.expr)
+            if not results:
+                none_found = True
+            else:
+                none_found = False
+        else:
+            results = []
+            none_found = False
+        
+        context.set_attribute('fields', fields)
+        context.set_attribute('results', results)
+        context.set_attribute('none_found', none_found)
+        context.render_template('task-inq.html')
+ 
     
     def do_initial(self, context):
         fields = {}
@@ -169,7 +195,7 @@ class TaskController:
                 if len(new_attachment_files) != len(filenames):
                     raise BadRequestException()
                 
-                cache.new_attachment_files_by_note_id[id] = new_attachment_files
+                cache.new_attachment_files_by_note_id[id] = [MultipartWrapper(p) for p in new_attachment_files]
         
         
         # Common Operations
@@ -222,56 +248,127 @@ class NoteCache:
         return result
         
 
+class TaskSearchCriteria:
+    def __init__(self, expr=None):
+        self.expr = expr
+    
+    def i_and(self, expr):
+        if self.expr:
+            self.expr = TaskSearchExpr(self.expr, TaskSearchLogicalOp.AND, expr)
+        else:
+            self.expr = expr
+    
+    def __str__(self):
+        return str(self.expr)
+
+
 # Processors
-class NameFieldProcessor:
+class SearchProcessor(ABC):
+    
+    str_operator_options = [
+        ('STARTS_WITH', 'Starts With'),
+        ('CONTAINS', 'Contains'),
+        ('EQUALS', 'Equals')
+    ]
+    
+    num_operator_options = [
+        ('EQ', '='),
+        ('GTE', '>='),
+        ('LTE', '<='),
+        ('GT', '>'),
+        ('LT', '<'),
+        ('NE', '<>')
+    ]
+
+    
+    @classmethod
+    def get_operator_field_name(cls):
+        return f'{cls.field_name}_operator'
+    
+    @classmethod
+    def get_str_op(cls, value):
+        if not value:
+            return None
+        try:
+            return TaskSearchStrOp[value.upper()]
+        except KeyError:
+            return None
+    
+    @classmethod
+    def get_num_op(cls, value):
+        if not value:
+            return None
+        try:
+            return TaskSearchNumOp[value.upper()]
+        except:
+            return None
+
+class NameFieldProcessor(SearchProcessor):
     
     field_name = 'name'
+    field_label = 'Name'
     
     @classmethod
     def define_field(cls, context, fields):
-        fields[NameFieldProcessor.field_name] = Field(
-            name=NameFieldProcessor.field_name,
-            label='Name'
+        fields[cls.field_name] = Field(
+            name=cls.field_name,
+            label=cls.field_label
         )
+        
     
     @classmethod
     def inquiry_setup(cls, context, fields, task):
-        fields[NameFieldProcessor.field_name].value = task.name
+        fields[cls.field_name].value = task.name
 
     @classmethod
     def process_field(cls, context, fields, task):
-        field = fields[NameFieldProcessor.field_name]
-        value = context.get_parameter(NameFieldProcessor.field_name)
+        field = fields[cls.field_name]
+        value = context.get_parameter(cls.field_name)
         
         if not value:
             field.error = 'Task name is required.'
         
         field.value = task.name = value
+    
+    @classmethod
+    def process_search(cls, context, fields, criteria):
+        field_name = cls.get_operator_field_name()
+        fields[field_name] = Field(
+            name=field_name,
+            type='select',
+            options=SearchProcessor.str_operator_options,
+            value=context.get_parameter(field_name)
+        )
+        
+        value = fields[cls.field_name].value = context.get_parameter(cls.field_name)
+        operator = cls.get_str_op(context.get_parameter(field_name))
+        if value and operator:
+            criteria.i_and(TaskSearchSimpleExpr(TaskSearchField.NAME, operator, value))
 
 
-#Allow blank due time -- definition as backlog
-class DueTimeFieldProcessor:
+class DueTimeFieldProcessor(SearchProcessor):
     
     field_name = 'due'
+    field_label = 'Due'
     
     @classmethod
     def define_field(cls, context, fields):
-        fields[DueTimeFieldProcessor.field_name] = field = Field(
-            name=DueTimeFieldProcessor.field_name,
-            label='Due',
+        fields[cls.field_name] = field = Field(
+            name=cls.field_name,
+            label=cls.field_label,
             type='datetime'
         )
     
     @classmethod
     def inquiry_setup(cls, context, fields, task):
-        fields[DueTimeFieldProcessor.field_name].value = DateTimeField.from_timestamp(task.due_ts)
+        fields[cls.field_name].value = DateTimeField.from_timestamp(task.due_ts)
     
     @classmethod
     def process_field(cls, context, fields, task):
-        field = fields[DueTimeFieldProcessor.field_name]
+        field = fields[cls.field_name]
         
         try:
-            value = DateTimeField.get_value(context, DueTimeFieldProcessor.field_name)
+            value = DateTimeField.get_value(context, cls.field_name)
         except ValidationException as e:
             field.error = e.message
             field.value = e.value
@@ -280,30 +377,57 @@ class DueTimeFieldProcessor:
         
         if not field.error:
             task.due_ts = value.timestamp
+    
+    @classmethod
+    def process_search(cls, context, fields, criteria):
+        # Search Field
+        search_field_name = cls.get_operator_field_name()
+        fields[search_field_name] = Field(
+            name=search_field_name,
+            type='select',
+            options=SearchProcessor.num_operator_options,
+            value=context.get_parameter(search_field_name)
+        )
+        
+        # Date Value
+        if context.get_parameter(cls.field_name):
+            value_field = fields[cls.field_name]
+            try:
+                value = DateTimeField.get_value(context, cls.field_name)
+            except ValidationException as e:
+                value_field.error = e.message
+                value_field.value = e.value
+            else:
+                value_field.value = value
+                operator = cls.get_num_op(context.get_parameter(search_field_name))
+                if value and operator:
+                    criteria.i_and(TaskSearchSimpleExpr(TaskSearchField.DUE, operator, value.timestamp))
+                
 
 
 
-class StatusFieldProcessor:
+class StatusFieldProcessor(SearchProcessor):
     
     field_name = 'status'
+    field_label = 'Status'
     
     @classmethod
     def define_field(cls, context, fields):
-        fields[StatusFieldProcessor.field_name] = Field(
-            name=StatusFieldProcessor.field_name,
-            label='Status',
-            options=[(item.name, item.name) for item in list(TaskStatus)],
-            type='select'
+        fields[cls.field_name] = Field(
+            name=cls.field_name,
+            label=cls.field_label,
+            type='select',
+            options=[(item.name, item.name) for item in list(TaskStatus)]
         )
     
     @classmethod
     def inquiry_setup(cls, context, fields, task):
-        fields[StatusFieldProcessor.field_name].value = task.status.name
+        fields[cls.field_name].value = task.status.name
 
     @classmethod
     def process_field(cls, context, fields, task):
-        field = fields[StatusFieldProcessor.field_name]
-        raw_value = field.value = context.get_parameter(StatusFieldProcessor.field_name)
+        field = fields[cls.field_name]
+        raw_value = field.value = context.get_parameter(cls.field_name)
         
         try:
             value = TaskStatus[raw_value]
@@ -311,56 +435,64 @@ class StatusFieldProcessor:
             field.error = 'Invalid status.'
         else:
             task.status = value
+    
+    @classmethod
+    def process_search(cls, context, fields, criteria):
+        field_name = cls.get_operator_field_name()
+        fields[field_name] = Field(
+            name=field_name,
+            readonly=True,
+            value='Is Any'
+        )
+        
+        field = fields[cls.field_name]
+        field.multiple = True
+        raw_values = field.value = context.get_parameter_values(cls.field_name)
+        
+        values = []
+        for raw_value in raw_values:
+            try:
+                values.append(TaskStatus[raw_value])
+            except KeyError:
+                field.error = 'Invalid status.'
+                break
+        else:
+            if values:
+                criteria.i_and(TaskSearchIsAnyExpr(TaskSearchField.STATUS, values))
 
 
 class TagsFieldProcessor:
     
     field_name = 'tags'
+    field_label = 'Tags'
     
     @classmethod
     def define_field(cls, context, fields):
-        fields[TagsFieldProcessor.field_name] = Field(
-            name=TagsFieldProcessor.field_name,
-            label='Tags'
+        fields[cls.field_name] = Field(
+            name=cls.field_name,
+            label=cls.field_label
         )
     
     @classmethod
     def inquiry_setup(cls, context, fields, task):
-        fields[TagsFieldProcessor.field_name].value = task.tags
+        fields[cls.field_name].value = task.tags
     
     @classmethod
     def process_field(cls, context, fields, task):
-        tags = context.get_parameter_values(TagsFieldProcessor.field_name)
+        tags = context.get_parameter_values(cls.field_name)
         task.tags = tags
-        fields[TagsFieldProcessor.field_name].value = tags
-
-
-class NotesFieldProcessor:
-    
-    field_name = 'notes'
+        fields[cls.field_name].value = tags
     
     @classmethod
-    def define_field(cls, context, fields):
-        fields[NotesFieldProcessor.field_name] = Field(
-            name=NotesFieldProcessor.field_name,
-            label='Notes'
-        )
-    
-    @classmethod
-    def inquiry_setup(cls, context, fields, task):
-        fields[NotesFieldProcessor.field_name].value = task.notes
-    
-    @classmethod
-    def process_field(cls, context, fields, task):
-        task.notes = fields[NotesFieldProcessor.field_name].value = context.get_parameter(NotesFieldProcessor.field_name)
+    def process_search(cls, context, fields, criteria):
+        values = fields[cls.field_name].value = context.get_parameter_values(cls.field_name)
+        if values:
+            criteria.i_and(TaskSearchIsAnyExpr(TaskSearchField.TAGS, values))
 
 
 field_processors = [
     NameFieldProcessor,
     DueTimeFieldProcessor,
     StatusFieldProcessor,
-    TagsFieldProcessor,
-    NotesFieldProcessor
+    TagsFieldProcessor
 ]
-
-

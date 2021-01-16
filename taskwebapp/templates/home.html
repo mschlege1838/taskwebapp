@@ -1,27 +1,11 @@
 {% extends 'base.html' %}
-{% from 'common.html' import task_url, format_ts -%}
+{% from 'common.html' import task_url, format_ts, task_header, task_row -%}
 
 
 
 {# Declarations #}
 
-{%- macro task_header() -%}
-<tr>
-    <th>Task</th>
-    <th>Status</th>
-    <th>Due</th>
-    <th>Last Action</th>
-</tr>
-{%- endmacro -%}
 
-{%- macro task_row(task) -%}
-<tr data-task-id="{{task.task_id}}">
-    <td><a href="{{task_url(task.task_id)}}">{{task.name|e}}</a></td>
-    <td>{{task.status|e}}</td>
-    <td data-type="timestamp">{{format_ts(task.due_ts)}}</td>
-    <td data-type="timestamp">{{format_ts(task.last_action_ts)}}</td>
-</tr>
-{%- endmacro -%}
 
 {%- macro task_section(title, tasks, sub_category=False) -%}
 <section class="{{'sub-category' if sub_category else 'task-category'}}">

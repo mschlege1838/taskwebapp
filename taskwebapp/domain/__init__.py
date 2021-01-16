@@ -17,11 +17,10 @@ class TaskStatus(Enum):
         return self.name
     
 class TaskReference:
-    def __init__(self, task_id, name, status, pending_upon, due_ts, last_action_ts):
+    def __init__(self, task_id, name, status, due_ts, last_action_ts):
         self.task_id = task_id
         self.name = name
         self.status = status
-        self.pending_upon = pending_upon
         self.due_ts = due_ts
         self.last_action_ts = last_action_ts
 
