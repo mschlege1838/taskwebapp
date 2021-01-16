@@ -259,6 +259,7 @@ AutocompleteInput.prototype.initMatch = function () {
     }
     
     if (!this.input.value) {
+        this.prevValue = null;
         this.closeBox();
         return;
     }
@@ -275,6 +276,11 @@ AutocompleteInput.prototype.fetchMatch = function () {
     var matcher, currentValue, onMatchesCallback;
     
     currentValue = this.input.value;
+    if (!currentValue) {
+        this.prevValue = null;
+        this.closeBox();
+        return;
+    }
     if (currentValue === this.prevValue) {
         return;
     }
