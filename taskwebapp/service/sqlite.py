@@ -190,7 +190,7 @@ class TaskService:
         connection = get_connection(self.db_fname)
         
         now = datetime.now()
-        next_sunday = now - timedelta(6 - now.weekday())
+        next_sunday = now + timedelta(6 - now.weekday())
         try:
             c = connection.cursor()
             
