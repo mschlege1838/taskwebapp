@@ -364,6 +364,7 @@ class TaskService:
                 n.NOTE_ID
                 , n.TEXT
                 , tn.PINNED_IND
+                , n.MOD_TS
               FROM TASK_NOTE tn
               JOIN NOTE n
                 ON n.NOTE_ID = tn.NOTE_ID
@@ -372,7 +373,7 @@ class TaskService:
             
             notes = {}
             for r in c:
-                notes[r['NOTE_ID']] = (TaskNote(r['NOTE_ID'], r['TEXT'], []), r['PINNED_IND'])
+                notes[r['NOTE_ID']] = (TaskNote(r['NOTE_ID'], r['TEXT'], [], r['MOD_TS']), r['PINNED_IND'])
             
             # Attachments
             c.execute('''
@@ -409,6 +410,8 @@ class TaskService:
                 task.pinned_notes.append(note)
             else:
                 task.notes.append(note)
+        
+        task.notes.sort(key=lambda v: -1 * v.mod_ts.timestamp())
         
         return task
     

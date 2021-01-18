@@ -36,10 +36,11 @@ class Task:
 
 
 class TaskNote:
-    def __init__(self, note_id=None, text=None, attachment_references=None):
+    def __init__(self, note_id=None, text=None, attachment_references=None, mod_ts=None):
         self.note_id = note_id
         self.text = text
         self.attachment_references = attachment_references
+        self.mod_ts = mod_ts
 
 
 class AttachmentReference:
