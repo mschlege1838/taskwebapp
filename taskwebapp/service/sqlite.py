@@ -204,6 +204,7 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE DUE_TS < ?
+                AND STATUS_ID <> 3
               ORDER BY DUE_TS
               LIMIT 20
             ''', (now,))
@@ -221,6 +222,7 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE TO_DATE(DUE_TS) = TO_DATE(?)
+                AND STATUS_ID <> 3
               ORDER BY DUE_TS
               LIMIT 20
             ''', (now,))
@@ -238,6 +240,7 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE TO_DATE(DUE_TS) BETWEEN TO_DATE(?) AND TO_DATE(?)
+                AND STATUS_ID <> 3
               ORDER BY DUE_TS
               LIMIT 20
             ''', (now, next_sunday))
