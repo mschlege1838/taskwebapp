@@ -52,7 +52,7 @@ class DateTimeField:
             raise ValidationException('Invalid date time.', DateTimeField(date_val, time_val))
         
         if not time_val:
-            time_val = '11:59'
+            time_val = '23:59'
         
         try:
             timestamp = datetime.strptime(f'{date_val}{time_val}', '%Y-%m-%d%H:%M')
