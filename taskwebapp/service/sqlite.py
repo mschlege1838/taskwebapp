@@ -465,7 +465,7 @@ class TaskService:
                 FROM TT_TAG
                 WHERE TAG_TEXT NOT IN (
                     SELECT TAG_TEXT
-                      FROM TT_TAG
+                      FROM TAG
                 )
             ''')
             
@@ -481,9 +481,6 @@ class TaskService:
                       FROM TT_TAG
                 )
             ''', (task_id,))
-            
-            c.execute('DROP TABLE TT_TAG')
-            
             
             # Notes
             c.executemany('''
