@@ -190,6 +190,7 @@ class TaskService:
         connection = get_connection(self.db_fname)
         
         now = datetime.now()
+        tomorrow = now + timedelta(1)
         next_sunday = now + timedelta(6 - now.weekday())
         try:
             c = connection.cursor()
@@ -243,7 +244,7 @@ class TaskService:
                 AND STATUS_ID <> 3
               ORDER BY DUE_TS
               LIMIT 20
-            ''', (now, next_sunday))
+            ''', (tomorrow, next_sunday))
             
             due_this_week = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
         
