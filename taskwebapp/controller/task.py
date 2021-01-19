@@ -223,7 +223,7 @@ class TaskController:
         task.pinned_notes = []
         for cache in (new_notes, existing_notes):
             for local_id, note in cache.notes.items():
-                if local_id in new_notes.pinned:
+                if local_id in cache.pinned:
                     task.pinned_notes.append(note)
                 else:
                     task.notes.append(note)
