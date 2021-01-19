@@ -785,12 +785,16 @@ class NoteService:
             
             c.execute('''
             DELETE FROM NOTE_ATTACHMENT AS t
-              WHERE NOT EXISTS (
-                  SELECT *
+              WHERE NOTE_ID IN (
+                  SELECT NOTE_ID
                     FROM TT_NOTE_ATT
-                    WHERE NOTE_ID = t.NOTE_ID
-                      AND ATTACHMENT_ID = t.ATTACHMENT_ID
               )
+                AND NOT EXISTS (
+                    SELECT *
+                      FROM TT_NOTE_ATT
+                      WHERE NOTE_ID = t.NOTE_ID
+                        AND ATTACHMENT_ID = t.ATTACHMENT_ID
+                )
             ''')
             
             c.execute('''
