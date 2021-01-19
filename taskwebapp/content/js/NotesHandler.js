@@ -12,6 +12,9 @@ function NotesHandler(addButton, notesListElement, form, pinnedListElement) {
     this.dragHandlers = new Map()
 }
 
+NotesHandler.DRAG_DROP_EXCLUDED_TAGS = ['TEXTAREA', 'A'];
+NotesHandler.DRAG_DROP_EXCLUDED_CLASSES = ['remove-button', 'unpin-button', 'drop-zone'];
+
 NotesHandler.prototype.deltaX = null;
 NotesHandler.prototype.deltaY = null;
 NotesHandler.prototype.targetContainer = null;
@@ -105,8 +108,13 @@ NotesHandler.prototype.handlePinnedDrag = function (event) {
         }
         case 'mousedown': {
             const target = event.target;
-            if (target.tagName === 'TEXTAREA' || target.classList.contains('drop-zone')) {
+            if (NotesHandler.DRAG_DROP_EXCLUDED_TAGS.indexOf(target.tagName) !== -1) {
                 return;
+            }
+            for (const excludedClass of NotesHandler.DRAG_DROP_EXCLUDED_CLASSES) {
+                if (target.classList.contains(excludedClass)) {
+                    return;
+                }
             }
             
             const currentTarget = event.currentTarget;
