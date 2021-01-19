@@ -81,9 +81,10 @@ class MultipartWrapper:
 
 
 class TaskDashboardData:
-    def __init__(self, late, due_today, due_this_week, pending, due_later):
+    def __init__(self, late, due_today, due_this_week, pending, due_later, backlog):
         self.late = late
         self.due_today = due_today
         self.due_this_week = due_this_week
         self.pending = pending
         self.due_later = due_later
+        self.backlog = backlog

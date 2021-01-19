@@ -282,6 +282,22 @@ class TaskService:
             
             due_later = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
             
+            # Backlog
+            c.execute('''
+            SELECT
+                TASK_ID
+                , TASK_NM
+                , STATUS_ID
+                , DUE_TS
+                , MOD_TS
+              FROM TASK
+              WHERE DUE_TS IS NULL
+                AND STATUS_ID <> 3
+              ORDER BY MOD_TS DESC
+              LIMIT 30
+            ''')
+            
+            backlog = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
             
             connection.commit()
         except Exception as e:
@@ -291,7 +307,7 @@ class TaskService:
             connection.close()
         
         
-        return TaskDashboardData(late, due_today, due_this_week, pending, due_later)  
+        return TaskDashboardData(late, due_today, due_this_week, pending, due_later, backlog)
     
     def search(self, criteria):
         if not criteria:
