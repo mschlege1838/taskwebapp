@@ -186,6 +186,9 @@ def is_solidus(cp):
 def is_tspecial(cp):
     return cp in (40, 41, 60, 62, 64, 44, 59, 58, 92, 34, 47, 91, 93, 63, 61)
 
+def is_dash(cp):
+    return cp == 45
+
 
 RFC2822_DATE_PATTERN = re.compile(r'(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*,)?\s*(\d{2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))\s+([+-])(\d{2})(\d{2}))?')
 RFC2822_WEEKDAY_MAPPING = {
@@ -243,28 +246,6 @@ def get_rfc2822_date(value):
 # Stream
 #--------------------------------------------
 
-#class MultipartStream:
-#    
-#    def __init__(self, byte_stream, length):
-#        self.data = byte_stream.read(length)
-#        self.cur_index = 0
-#        
-#    def next_cp(self):
-#        data = self.data
-#        cur_index = self.cur_index
-#        
-#        if cur_index >= len(data):
-#            return None
-#        
-#        self.cur_index += 1
-#        return data[cur_index]
-#    
-#    def lookahead(self, k=1):
-#        data = self.data
-#        next_index = self.cur_index + k - 1
-#        
-#        return data[next_index] if next_index < len(data) else None
-
 class MultipartStream:
     
     read_size = 1024000
@@ -313,29 +294,34 @@ class MultipartStream:
             return self.buf[next_index] if next_index < self.cur_max else None
         else:
             of_buf = self.of_buf
-            return of_buf[len(of_buf) + next_index]
+            target = len(of_buf) + next_index
+            return of_buf[target] if target < len(of_buf) else None
+    
+    def consume_lookahead(self, k=1):
+        # TODO make more efficient
+        for i in range(0, k):
+            self.next_cp()
     
     def __do_read(self):
         cur_index = self.cur_index
         cur_max = self.cur_max
         buf = self.buf
+
+        if cur_index >= 0 and cur_index < cur_max:
+            self.of_buf = buf[cur_index:cur_max]
+            self.cur_index = -1 * (cur_max - cur_index)
+        else:
+            self.of_buf = None
+            self.cur_index = 0
         
         length = self.length
         if length is not None:
             total_read = self.total_read
             if total_read + len(buf) > length:
                 buf = self.buf = bytearray(length - total_read)
-            
+        
         next_max = self.byte_stream.readinto(buf)
         self.total_read += next_max
-            
-        
-        if cur_index < cur_max:
-            self.of_buf = self.buf[cur_index:cur_max]
-            self.cur_index = -1 * (cur_max - cur_index)
-        else:
-            self.of_buf = None
-            self.cur_index = 0
         
         self.cur_max = next_max
 
@@ -374,10 +360,15 @@ class MultipartLexer:
     
     def __init__(self, stream, boundary):
         self.stream = stream
-        self.boundary_token = Token(TokenType.BOUNDARY, f'--{boundary}')
-        self.end_message_token = Token(TokenType.END_OF_MESSAGE, f'--{boundary}--')
+        boundary_value = self.boundary_value = f'--{boundary}'
+        self.boundary_token = Token(TokenType.BOUNDARY, boundary_value)
+        self.end_message_token = Token(TokenType.END_OF_MESSAGE, f'{boundary_value}--')
+        
         self.buf = bytearray()
         self.la_token = None
+        self.in_body = False
+        
+        self.b_token = None
     
     def next_token(self):
         stream = self.stream
@@ -388,7 +379,11 @@ class MultipartLexer:
             la_token = self.la_token
             self.la_token = None
             return la_token
-            
+        
+        if self.b_token:
+            b_token = self.la_token = self.b_token
+            self.b_token = None
+            return b_token
         
         while True:
             cp = stream.next_cp()
@@ -396,59 +391,101 @@ class MultipartLexer:
             if cp is None:
                 return Token.EOF
             
-            if state == 0:
-                if is_colon(cp):
-                    return Token.COLON
-                elif is_lf(cp):
-                    return Token.LF
-                    
-                elif is_cr(cp):
-                    if is_lf(stream.lookahead()):
-                        stream.next_cp()
-                        return Token.CRLF
+            if self.in_body:
+                if state == 0:
+                    if is_cr(cp) and is_lf(stream.lookahead()) and is_dash(stream.lookahead(2)) and is_dash(stream.lookahead(3)):
+                        boundary_value = self.boundary_value
+                        b_buf = bytearray()
+                        
+                        for k in range(0, len(boundary_value)):
+                            la = stream.lookahead(k + 2)
+                            if la is None:
+                                state = 1
+                                break
+                            b_buf.append(la)
+                        else:
+                            try:
+                                if b_buf.decode() == boundary_value:
+                                    stream.consume_lookahead(k + 2)
+                                    if is_dash(stream.lookahead(1)) and is_dash(stream.lookahead(2)):
+                                        stream.consume_lookahead(2)
+                                        if len(buf):
+                                            self.b_token = self.end_message_token
+                                            result = Token(TokenType.OCTET_STR, bytes(buf))
+                                            buf.clear()
+                                            return result
+                                        else:
+                                            self.la_token = self.end_message_token
+                                            return self.end_message_token
+                                    else:
+                                        if len(buf):
+                                            self.b_token = self.boundary_token
+                                            result = Token(TokenType.OCTET_STR, bytes(buf))
+                                            buf.clear()
+                                            return result
+                                        else:
+                                            self.la_token = self.boundary_token
+                                            return self.boundary_token
+                            except UnicodeError:
+                                state = 1
                     else:
-                        return Token.CR
+                        state = 1
                 
-                elif is_hwsp(cp):
-                    state = 1
-                elif is_ascii(cp):
-                    state = 3
-                else:
-                    state = 4
-                
-            # HWSP_STR
-            if state == 1:
-                buf.append(cp)
-                if not is_hwsp(stream.lookahead()):
-                    result = Token(TokenType.HWSP, buf.decode('ascii'))
+                if state == 1:
+                    buf.append(cp)
                     state = 0
-                    buf.clear()
-                    return result
-            
-            # ASCII_STR
-            if state == 3:
-                buf.append(cp)
-                if not is_ascii(stream.lookahead()):
-                    value = buf.decode('ascii')
-                    if value == self.boundary_token.value:
-                        result = self.boundary_token
-                    elif value == self.end_message_token.value:
-                        result = self.end_message_token
-                    else:
-                        result = Token(TokenType.ASCII_STR, value)
+                
+            else:
+                if state == 0:
+                    if is_colon(cp):
+                        return Token.COLON
+                    elif is_lf(cp):
+                        return Token.LF
+                        
+                    elif is_cr(cp):
+                        if is_lf(stream.lookahead()):
+                            stream.next_cp()
+                            return Token.CRLF
+                        else:
+                            return Token.CR
                     
-                    state = 0
-                    buf.clear()
-                    return result
-            
-            # OCTET_STR
-            if state == 4:
-                buf.append(cp)
-                if max([fn(stream.lookahead()) for fn in (is_ascii, is_hex, is_hwsp, is_colon, is_cr, is_lf, lambda cp: cp is None)]):
-                    result = Token(TokenType.OCTET_STR, bytes(buf))
-                    state = 0
-                    buf.clear()
-                    return result
+                    elif is_hwsp(cp):
+                        state = 1
+                    elif is_ascii(cp):
+                        state = 3
+                    else:
+                        state = 4
+                    
+                # HWSP_STR
+                if state == 1:
+                    buf.append(cp)
+                    if not is_hwsp(stream.lookahead()):
+                        result = Token(TokenType.HWSP, buf.decode('ascii'))
+                        buf.clear()
+                        return result
+                
+                # ASCII_STR
+                if state == 3:
+                    buf.append(cp)
+                    if not is_ascii(stream.lookahead()):
+                        value = buf.decode('ascii')
+                        if value == self.boundary_token.value:
+                            result = self.boundary_token
+                        elif value == self.end_message_token.value:
+                            result = self.end_message_token
+                        else:
+                            result = Token(TokenType.ASCII_STR, value)
+                        
+                        buf.clear()
+                        return result
+                
+                # OCTET_STR
+                if state == 4:
+                    buf.append(cp)
+                    if max([fn(stream.lookahead()) for fn in (is_ascii, is_hex, is_hwsp, is_colon, is_cr, is_lf, lambda cp: cp is None)]):
+                        result = Token(TokenType.OCTET_STR, bytes(buf))
+                        buf.clear()
+                        return result
 
     
     def lookahead(self):
@@ -457,7 +494,12 @@ class MultipartLexer:
         
         la_token = self.la_token = self.next_token()
         return la_token
+    
+    def body_start(self):
+        self.in_body = True
 
+    def body_end(self):
+        self.in_body = False
 
 #--------------------------------------------
 # Parser
@@ -487,9 +529,7 @@ class MultipartBodyBuffer:
             return MultipartBody(True, self.temp_file)
         else:
             return MultipartBody(False, bytes(handle))
-        
-        
-    
+
 
 class MultipartBody:
     def __init__(self, is_file, value):
@@ -539,7 +579,6 @@ class MultipartParser:
                 break
             headers[header.name] = header
 
-
         # Process Headers
         if not 'Content-Disposition' in headers:
             raise ProtocolViolationException()
@@ -565,21 +604,18 @@ class MultipartParser:
             body = MultipartBodyBuffer(f)
         else:
             body = MultipartBodyBuffer()
-
+        
+        lexer.body_start()
         while True:
             t = lexer.next_token()
             if t.type == TokenType.OCTET_STR:
                 body += t.value
-            elif t.type in (TokenType.ASCII_STR, TokenType.COLON, TokenType.HWSP, TokenType.CR, TokenType.LF):
-                body += t.value.encode('ascii')
-            elif t.type == TokenType.CRLF:  
-                la = lexer.lookahead()
-                if la.type in (TokenType.BOUNDARY, TokenType.END_OF_MESSAGE):
-                    return Part(headers, body.finish())
-                elif la.type == TokenType.EOF:
-                    raise IllegalTokenException(la)
-                else:
-                    body += t.value.encode('ascii')
+            elif t.type in (TokenType.BOUNDARY, TokenType.END_OF_MESSAGE):
+                lexer.body_end()
+                return Part(headers, body.finish())
+            else:
+                raise IllegalTokenException(t)
+
     
     
     def header(self):
