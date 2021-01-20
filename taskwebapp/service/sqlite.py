@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 # User
-from taskwebapp.domain import TaskReference, TaskStatus, Task, AttachmentReference, TaskNote, Attachment, TaskDashboardData
+from taskwebapp.domain.attachment import AttachmentReference, Attachment
+from taskwebapp.domain.task import TaskReference, TaskStatus, Task, TaskNote, TaskDashboardData
 from taskwebapp.domain.task.search import TaskSearchLogicalOp, TaskSearchStrOp, TaskSearchNumOp, TaskSearchField, \
     TaskSearchSimpleExpr, TaskSearchIsAnyExpr, TaskSearchExpr, TaskSearchGroupExpr
 

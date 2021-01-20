@@ -9,7 +9,7 @@ from pathlib import Path
 # User
 import taskwebapp.requestutils as requestutils
 
-from taskwebapp.domain import TaskStatus
+from taskwebapp.domain.task import TaskStatus
 from taskwebapp.controller import RequestException
 
 # Definitions

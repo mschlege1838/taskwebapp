@@ -11,7 +11,8 @@ from datetime import datetime
 import taskwebapp.requestutils as requestutils
 
 from taskwebapp.controller import Field, DateTimeField, ValidationException, BadRequestException, NotFoundException
-from taskwebapp.domain import Task, TaskStatus, TaskNote, MultipartWrapper
+from taskwebapp.domain import MultipartWrapper
+from taskwebapp.domain.task import Task, TaskStatus, TaskNote
 from taskwebapp.domain.task.search import TaskSearchLogicalOp, TaskSearchStrOp, TaskSearchNumOp, TaskSearchSimpleExpr, \
         TaskSearchIsAnyExpr, TaskSearchExpr, TaskSearchField
 
