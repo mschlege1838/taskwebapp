@@ -5,6 +5,8 @@ class TaskStatus(Enum):
     READY = 1
     PENDING = 2
     COMPLETE = 3
+    IN_PROGRESS = 4
+    CANCELED = 5
     
     def __str__(self):
         return self.name
@@ -36,10 +38,11 @@ class TaskNote:
         self.mod_ts = mod_ts
 
 class TaskDashboardData:
-    def __init__(self, late, due_today, due_this_week, pending, due_later, backlog):
+    def __init__(self, late, due_today, due_this_week, pending, due_later, backlog, in_progress):
         self.late = late
         self.due_today = due_today
         self.due_this_week = due_this_week
         self.pending = pending
         self.due_later = due_later
         self.backlog = backlog
+        self.in_progress = in_progress

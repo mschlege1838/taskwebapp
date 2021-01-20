@@ -8,7 +8,7 @@
 
 
 {%- macro task_section(title, tasks, sub_category=False) -%}
-<section class="{{'sub-category' if sub_category else 'task-category'}}">
+<section class="task-category">
     <h2>{{ title|e }}</h2>
     <table>
         <thead>
@@ -32,10 +32,15 @@
 
 {%- block head -%}
 <style>
+.task-block .task-category, .late {
+    width: 50%;
+}
 .task-block .task-category {
     display: inline-block;
-    width: 50%;
     vertical-align: top;
+}
+.late {
+    margin: auto;
 }
 </style>
 {%- endblock -%}
@@ -43,20 +48,23 @@
 
 
 {%- block main -%}
+{%- if data.late -%}
+<div class="late">
+    {{- task_section('Late', data.late) -}}
+</div>
+{%- endif -%}
 <div class="task-block">
-    <section class="task-category">
-        {%- if data.late -%}
-            {{- task_section('Late', data.late, True) -}}
-        {%- endif -%}
-        {{- task_section('Due Today', data.due_today, True) -}}
-    </section>
+    {{- task_section('In Progress', data.in_progress) -}}
+    {{- task_section('Pending', data.pending) -}}
+</div>
+<div class="task-block">
+    {{- task_section('Due Today', data.due_today) -}}
     {{- task_section('Due This Week', data.due_this_week) -}}
 </div>
 <div class="task-block">
-    {{- task_section('Pending', data.pending) -}}
     {{- task_section('Due Later', data.due_later) -}}
+    {{- task_section('Backlog', data.backlog) -}}
 </div>
-{{- task_section('Backlog', data.backlog) -}}
 {%- endblock -%}
 
 

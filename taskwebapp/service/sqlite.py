@@ -22,7 +22,7 @@ def like_escape(val, case_sensitive=False):
 
 
 
-schema_version = 1
+schema_version = 2
 
 def sqlite3_to_date(v):
     if v is None:
@@ -48,126 +48,133 @@ def get_connection(db_fname):
         c = connection.cursor()
         
         c.execute('PRAGMA user_version')
-        if schema_version == next(c)[0]:
+        current_version = next(c)[0]
+        if schema_version == current_version:
             c.close()
             return connection
         
-        # DDL
+        if current_version < 1:
+            # TaskStatus
+            c.execute('''
+            CREATE TABLE STATUS_DM (
+              STATUS_ID INTEGER PRIMARY KEY
+              , STATUS_NM TEXT NOT NULL
+            )
+              WITHOUT ROWID
+            ''')
+            
+            
+            c.executemany('''
+            INSERT INTO STATUS_DM
+              (STATUS_ID, STATUS_NM)
+              VALUES (?, ?)
+            ''', [(v.value, v.name) for v in (TaskStatus.READY, TaskStatus.PENDING, TaskStatus.COMPLETE)])
+            
+            
+            # Task
+            c.execute('''
+            CREATE TABLE TASK (
+              TASK_ID INTEGER PRIMARY KEY
+              , TASK_NM TEXT NOT NULL
+              , STATUS_ID INTEGER NOT NULL
+              , DUE_TS TIMESTAMP
+              , MOD_TS TIMESTAMP
+              
+              , CONSTRAINT FKTSK1
+                  FOREIGN KEY (STATUS_ID)
+                  REFERENCES STATUS_DM (STATUS_ID)
+            )
+            ''')
+            
+            # Note
+            c.execute('''
+            CREATE TABLE NOTE (
+              NOTE_ID INTEGER PRIMARY KEY
+              , TEXT TEXT
+              , MOD_TS TIMESTAMP NOT NULL
+            )
+            ''')
+            
+            # Attachment
+            c.execute('''
+            CREATE TABLE ATTACHMENT (
+              ATTACHMENT_ID INTEGER PRIMARY KEY
+              , ATTACHMENT_NM TEXT NOT NULL
+              , MIME_TYPE TEXT NOT NULL
+              , CONTENT BLOB NOT NULL
+              , CRTN_TS TIMESTAMP NOT NULL
+            )
+            ''')
+            
+            # Tags
+            c.execute('''
+            CREATE TABLE TAG (
+              TAG_ID INTEGER PRIMARY KEY
+              , TAG_TEXT TEXT
+              
+              , CONSTRAINT UTG1
+                  UNIQUE (TAG_TEXT)
+            )
+            ''')
+            
+            
+            # Relationships
+            c.execute('''
+            CREATE TABLE TASK_TAG (
+              TASK_ID INTEGER NOT NULL
+              , TAG_ID INTEGER NOT NULL
+              
+              , CONSTRAINT PKTSKTG
+                  PRIMARY KEY (TASK_ID, TAG_ID)
+            )
+              WITHOUT ROWID
+            ''')
+            
+            c.execute('''
+            CREATE TABLE TASK_NOTE (
+              TASK_ID INTEGER NOT NULL
+              , NOTE_ID INTEGER NOT NULL
+              , PINNED_IND INTEGER NOT NULL
+              
+              , CONSTRAINT PKTSKNT
+                  PRIMARY KEY (TASK_ID, NOTE_ID)
+              
+              , CONSTRAINT FKTSKNT1
+                  FOREIGN KEY (TASK_ID)
+                  REFERENCES TASK (NOTE_ID)
+              
+              , CONSTRAINT FKTSKNT2
+                  FOREIGN KEY (NOTE_ID)
+                  REFERENCES NOTE (NOTE_ID)
+            )
+              WITHOUT ROWID
+            ''')
+            
+            c.execute('''
+            CREATE TABLE NOTE_ATTACHMENT (
+              NOTE_ID INTEGER NOT NULL
+              , ATTACHMENT_ID INTEGER NOT NULL
+              
+              , CONSTRAINT PKNTATT
+                  PRIMARY KEY (NOTE_ID, ATTACHMENT_ID)
+              
+              , CONSTRAINT FKNTATT1
+                  FOREIGN KEY (NOTE_ID)
+                  REFERENCES NOTE (NOTE_ID)
+              
+              , CONSTRAINT FKNTATT2
+                  FOREIGN KEY (ATTACHMENT_ID)
+                  REFERENCES ATTACHMENT (ATTACHMENT_ID)
+            )
+              WITHOUT ROWID
+            ''')
         
-        # TaskStatus
-        c.execute('''
-        CREATE TABLE STATUS_DM (
-          STATUS_ID INTEGER PRIMARY KEY
-          , STATUS_NM TEXT NOT NULL
-        )
-          WITHOUT ROWID
-        ''')
-        
-        
-        c.executemany('''
-        INSERT INTO STATUS_DM
-          (STATUS_ID, STATUS_NM)
-          VALUES (?, ?)
-        ''', [(v.value, v.name) for v in TaskStatus])
-        
-        
-        # Task
-        c.execute('''
-        CREATE TABLE TASK (
-          TASK_ID INTEGER PRIMARY KEY
-          , TASK_NM TEXT NOT NULL
-          , STATUS_ID INTEGER NOT NULL
-          , DUE_TS TIMESTAMP
-          , MOD_TS TIMESTAMP
-          
-          , CONSTRAINT FKTSK1
-              FOREIGN KEY (STATUS_ID)
-              REFERENCES STATUS_DM (STATUS_ID)
-        )
-        ''')
-        
-        # Note
-        c.execute('''
-        CREATE TABLE NOTE (
-          NOTE_ID INTEGER PRIMARY KEY
-          , TEXT TEXT
-          , MOD_TS TIMESTAMP NOT NULL
-        )
-        ''')
-        
-        # Attachment
-        c.execute('''
-        CREATE TABLE ATTACHMENT (
-          ATTACHMENT_ID INTEGER PRIMARY KEY
-          , ATTACHMENT_NM TEXT NOT NULL
-          , MIME_TYPE TEXT NOT NULL
-          , CONTENT BLOB NOT NULL
-          , CRTN_TS TIMESTAMP NOT NULL
-        )
-        ''')
-        
-        # Tags
-        c.execute('''
-        CREATE TABLE TAG (
-          TAG_ID INTEGER PRIMARY KEY
-          , TAG_TEXT TEXT
-          
-          , CONSTRAINT UTG1
-              UNIQUE (TAG_TEXT)
-        )
-        ''')
-        
-        
-        # Relationships
-        c.execute('''
-        CREATE TABLE TASK_TAG (
-          TASK_ID INTEGER NOT NULL
-          , TAG_ID INTEGER NOT NULL
-          
-          , CONSTRAINT PKTSKTG
-              PRIMARY KEY (TASK_ID, TAG_ID)
-        )
-          WITHOUT ROWID
-        ''')
-        
-        c.execute('''
-        CREATE TABLE TASK_NOTE (
-          TASK_ID INTEGER NOT NULL
-          , NOTE_ID INTEGER NOT NULL
-          , PINNED_IND INTEGER NOT NULL
-          
-          , CONSTRAINT PKTSKNT
-              PRIMARY KEY (TASK_ID, NOTE_ID)
-          
-          , CONSTRAINT FKTSKNT1
-              FOREIGN KEY (TASK_ID)
-              REFERENCES TASK (NOTE_ID)
-          
-          , CONSTRAINT FKTSKNT2
-              FOREIGN KEY (NOTE_ID)
-              REFERENCES NOTE (NOTE_ID)
-        )
-          WITHOUT ROWID
-        ''')
-        
-        c.execute('''
-        CREATE TABLE NOTE_ATTACHMENT (
-          NOTE_ID INTEGER NOT NULL
-          , ATTACHMENT_ID INTEGER NOT NULL
-          
-          , CONSTRAINT PKNTATT
-              PRIMARY KEY (NOTE_ID, ATTACHMENT_ID)
-          
-          , CONSTRAINT FKNTATT1
-              FOREIGN KEY (NOTE_ID)
-              REFERENCES NOTE (NOTE_ID)
-          
-          , CONSTRAINT FKNTATT2
-              FOREIGN KEY (ATTACHMENT_ID)
-              REFERENCES ATTACHMENT (ATTACHMENT_ID)
-        )
-          WITHOUT ROWID
-        ''')
+        if current_version < 2:
+            c.executemany('''
+            INSERT INTO STATUS_DM
+              (STATUS_ID, STATUS_NM)
+              VALUES (?, ?)
+            ''', [(v.value, v.name) for v in (TaskStatus.IN_PROGRESS, TaskStatus.CANCELED)])
         
         
         c.execute(f'PRAGMA user_version = {schema_version}')
@@ -206,13 +213,29 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE DUE_TS < ?
-                AND STATUS_ID <> 3
+                AND STATUS_ID NOT IN (3, 5)
               ORDER BY DUE_TS
               LIMIT 20
             ''', (now,))
             
             late = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
             
+            # In Progress
+            c.execute('''
+            SELECT
+                TASK_ID
+                , TASK_NM
+                , STATUS_ID
+                , DUE_TS
+                , MOD_TS
+              FROM TASK
+              WHERE (DUE_TS >= ? OR DUE_TS IS NULL)
+                AND STATUS_ID = 4
+              ORDER BY DUE_TS
+              LIMIT 20
+            ''', (now,))
+            
+            in_progress = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
             
             # Due Today
             c.execute('''
@@ -225,7 +248,7 @@ class TaskService:
               FROM TASK
               WHERE TO_DATE(DUE_TS) = TO_DATE(?)
                 AND DUE_TS >= ?
-                AND STATUS_ID <> 3
+                AND STATUS_ID = 1
               ORDER BY DUE_TS
               LIMIT 20
             ''', (now, now))
@@ -243,7 +266,7 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE TO_DATE(DUE_TS) BETWEEN TO_DATE(?) AND TO_DATE(?)
-                AND STATUS_ID <> 3
+                AND STATUS_ID = 1
               ORDER BY DUE_TS
               LIMIT 20
             ''', (tomorrow, next_sunday))
@@ -261,9 +284,10 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE STATUS_ID = 2
+                AND (DUE_TS >= ? OR DUE_TS IS NULL)
               ORDER BY DUE_TS
               LIMIT 20
-            ''')
+            ''', (now,))
             
             pending = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
             
@@ -294,9 +318,9 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE DUE_TS IS NULL
-                AND STATUS_ID <> 3
+                AND STATUS_ID = 1
               ORDER BY MOD_TS DESC
-              LIMIT 30
+              LIMIT 20
             ''')
             
             backlog = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
@@ -309,7 +333,7 @@ class TaskService:
             connection.close()
         
         
-        return TaskDashboardData(late, due_today, due_this_week, pending, due_later, backlog)
+        return TaskDashboardData(late, due_today, due_this_week, pending, due_later, backlog, in_progress)
     
     def search(self, criteria):
         if not criteria:
