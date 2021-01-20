@@ -243,28 +243,101 @@ def get_rfc2822_date(value):
 # Stream
 #--------------------------------------------
 
+#class MultipartStream:
+#    
+#    def __init__(self, byte_stream, length):
+#        self.data = byte_stream.read(length)
+#        self.cur_index = 0
+#        
+#    def next_cp(self):
+#        data = self.data
+#        cur_index = self.cur_index
+#        
+#        if cur_index >= len(data):
+#            return None
+#        
+#        self.cur_index += 1
+#        return data[cur_index]
+#    
+#    def lookahead(self, k=1):
+#        data = self.data
+#        next_index = self.cur_index + k - 1
+#        
+#        return data[next_index] if next_index < len(data) else None
+
 class MultipartStream:
     
-    def __init__(self, byte_stream, length):
-        self.data = byte_stream.read(length)
+    read_size = 1024000
+    
+    def __init__(self, byte_stream, length=None):
+        self.byte_stream = byte_stream
+        self.length = length
+        
+        self.total_read = 0
+        
+        self.buf = bytearray(MultipartStream.read_size)
+        self.of_buf = None
+        self.cur_max = -1
         self.cur_index = 0
         
     def next_cp(self):
-        data = self.data
+        buf = self.buf
         cur_index = self.cur_index
+        cur_max = self.cur_max
         
-        if cur_index >= len(data):
-            return None
+        if cur_index >= cur_max:
+            self.__do_read()
+            cur_index = self.cur_index
+            if self.cur_max == 0:
+                return None
         
         self.cur_index += 1
-        return data[cur_index]
+        
+        if cur_index >= 0:
+            return self.buf[cur_index]
+        else:
+            of_buf = self.of_buf
+            return of_buf[len(of_buf) + cur_index]
     
     def lookahead(self, k=1):
-        data = self.data
         next_index = self.cur_index + k - 1
+        cur_max = self.cur_max
         
-        return data[next_index] if next_index < len(data) else None
-
+        if next_index >= cur_max and cur_max > 0:
+            self.__do_read()
+            next_index = self.cur_index + k - 1
+            if self.cur_max == 0:
+                return None
+        
+        if next_index >= 0:
+            return self.buf[next_index] if next_index < self.cur_max else None
+        else:
+            of_buf = self.of_buf
+            return of_buf[len(of_buf) + next_index]
+    
+    def __do_read(self):
+        cur_index = self.cur_index
+        cur_max = self.cur_max
+        buf = self.buf
+        
+        length = self.length
+        if length is not None:
+            total_read = self.total_read
+            if total_read + len(buf) > length:
+                buf = self.buf = bytearray(length - total_read)
+            
+        next_max = self.byte_stream.readinto(buf)
+        self.total_read += next_max
+            
+        
+        if cur_index < cur_max:
+            self.of_buf = self.buf[cur_index:cur_max]
+            self.cur_index = -1 * (cur_max - cur_index)
+        else:
+            self.of_buf = None
+            self.cur_index = 0
+        
+        self.cur_max = next_max
 
 #--------------------------------------------
 # Lexer
