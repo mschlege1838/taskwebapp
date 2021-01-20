@@ -218,7 +218,7 @@ class TaskService:
               LIMIT 20
             ''', (now,))
             
-            late = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            late = self.__reference_rs(c)
             
             # In Progress
             c.execute('''
@@ -235,7 +235,7 @@ class TaskService:
               LIMIT 20
             ''', (now,))
             
-            in_progress = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            in_progress = self.__reference_rs(c)
             
             # Due Today
             c.execute('''
@@ -253,7 +253,7 @@ class TaskService:
               LIMIT 20
             ''', (now, now))
             
-            due_today = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            due_today = self.__reference_rs(c)
             
             
             # Due this week
@@ -271,7 +271,7 @@ class TaskService:
               LIMIT 20
             ''', (tomorrow, next_sunday))
             
-            due_this_week = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            due_this_week = self.__reference_rs(c)
         
             
             # Pending
@@ -289,7 +289,7 @@ class TaskService:
               LIMIT 20
             ''', (now,))
             
-            pending = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            pending = self.__reference_rs(c)
             
             # Due Later
             c.execute('''
@@ -306,7 +306,7 @@ class TaskService:
               LIMIT 20
             ''', (next_sunday,))
             
-            due_later = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            due_later = self.__reference_rs(c)
             
             # Backlog
             c.execute('''
@@ -323,7 +323,7 @@ class TaskService:
               LIMIT 20
             ''')
             
-            backlog = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            backlog = self.__reference_rs(c)
             
             connection.commit()
         except Exception as e:
@@ -358,7 +358,7 @@ class TaskService:
             c = connection.cursor()
             
             c.execute(sql, builder.params)
-            result = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
+            result = self.__reference_rs(c)
             
             connection.commit()
         except Exception as e:
@@ -708,6 +708,10 @@ class TaskService:
                 FROM TASK_NOTE
           )
         ''')
+    
+    
+    def __reference_rs(self, c):
+        return [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
 
 
 class NoteService:
