@@ -224,10 +224,11 @@ class TaskService:
                 , MOD_TS
               FROM TASK
               WHERE TO_DATE(DUE_TS) = TO_DATE(?)
+                AND DUE_TS >= ?
                 AND STATUS_ID <> 3
               ORDER BY DUE_TS
               LIMIT 20
-            ''', (now,))
+            ''', (now, now))
             
             due_today = [TaskReference(r['TASK_ID'], r['TASK_NM'], TaskStatus(r['STATUS_ID']), r['DUE_TS'], r['MOD_TS']) for r in c]
             
