@@ -40,6 +40,8 @@ class Field:
 
 class DateTimeField:
     
+    no_colon_time_pattern = re.compile(r'\d{4}')
+    
     @classmethod
     def get_value(cls, context, field_name):
         date_val = context.get_parameter(field_name)
@@ -53,6 +55,10 @@ class DateTimeField:
         
         if not time_val:
             time_val = '23:59'
+        
+        if DateTimeField.no_colon_time_pattern.match(time_val):
+            t = time_val
+            time_val = f'{t[0:2]}:{t[2:4]}'
         
         try:
             timestamp = datetime.strptime(f'{date_val}{time_val}', '%Y-%m-%d%H:%M')
