@@ -72,8 +72,14 @@
 {%- elif type == 'textarea' -%}
     <textarea name="{{name}}" id="{{name}}" {{- bool_attribute('readonly', readonly) -}}>{{value|sn|e}}</textarea>
 {%- elif type == 'datetime' -%}
-    <input name="{{name}}" id="{{name}}" type="date" {{- attribute('value', value.date_val) -}} {{- bool_attribute('readonly', readonly) -}} />
-    <input name="{{name}}_time" id="{{name}}_time" placeholder="HH:MM" {{ attribute('value', value.time_val) }} {{- bool_attribute('readonly', readonly) -}} />
+    <span class="datetime-field">
+        <input name="{{name}}" id="{{name}}" type="date" class="date-input" {{- attribute('value', value.date_val) -}} {{- bool_attribute('readonly', readonly) -}} />
+        <input name="{{name}}_time" id="{{name}}_time" class="time-input" placeholder="HH:MM" {{ attribute('value', value.time_val) }} {{- bool_attribute('readonly', readonly) -}} />
+        <input type="button" class="clear-button" value="&#215;" />
+        <input type="button" class="midnight-button" value="Midnight" />
+        <input type="button" class="eob-button" value="EOB" />
+        <input type="button" class="eod-button" value="EOD" />
+    </span>
 {%- else -%}
     <input name="{{name}}" id="{{name}}" {{ attribute('type', type) }} {{ attribute('value', value) }} {{- bool_attribute('readonly', readonly) -}} />
 {%- endif -%}

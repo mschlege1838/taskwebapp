@@ -3,6 +3,10 @@
 <head>
 <title>{%- block title -%}{%- endblock -%}</title>
 <link rel="stylesheet" href="/content/css/style.css" />
+<script src="/content/js/DateTimeField.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', DateTimeField.initAll, false);
+</script>
 {%- block head -%}{%- endblock -%}
 </head>
 <body>
