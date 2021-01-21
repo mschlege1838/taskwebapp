@@ -16,6 +16,7 @@ TagFieldHandler.prototype.init = function (currentTags) {
     'use strict';
     
     this.tagInput.addEventListener('keydown', this, false);
+    this.tagInput.addEventListener('blur', this, false);
     
     if (currentTags) {
         for (const tagName of currentTags) {
@@ -30,13 +31,20 @@ TagFieldHandler.prototype.handleEvent = function (event) {
     const target = event.target;
     const tagInput = this.tagInput;
     
-    if (event.target === tagInput) {
+    if (event.target === tagInput && event.type === 'keydown') {
         if (event.key === 'Enter' || event.keyCode === 0x0D || event.key === 'Tab' || event.keyCode === 0x09) {
             event.preventDefault();
             const value = tagInput.value;
             if (value) {
                 this.addTag(tagInput.value);
             }
+        }
+    }
+    
+    else if (event.target === tagInput && event.type === 'blur') {
+        const value = tagInput.value;
+        if (value) {
+            this.addTag(tagInput.value);
         }
     }
     
