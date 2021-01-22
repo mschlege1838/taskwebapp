@@ -44,7 +44,7 @@ DateTimeField.prototype.handleEvent = function (event) {
             timeInput.value = '17:00';
             break;
         case this.eodButton:
-            timeInput.value = '11:59';
+            timeInput.value = '23:59';
             break;
     }
 };
