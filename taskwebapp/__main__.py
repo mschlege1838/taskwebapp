@@ -6,6 +6,7 @@ import re
 import json
 import traceback
 import os.path
+import time
 
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -154,7 +155,7 @@ t.start()
 
 try:
     while True:
-        pass
+        time.sleep(60)
 except KeyboardInterrupt:
     print('Keyboard Interrupt: shutting down server.')
     server.shutdown()
